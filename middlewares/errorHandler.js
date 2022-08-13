@@ -5,9 +5,7 @@ const errorHandler = (err, req, res, next) => {
 			res.status(404).json({ message: 'Not found'})
 			break;
 		case 'BAD_REQUEST': 
-			// console.log(err.payload)
-			// res.status(401).json({ message: `${payload.join(', ')} is required`})
-			res.status(401).json({ message: `Bad Request`})
+			res.status(401).json({ message: `${err.payload} is required`})
 			break;
 		default:
 			res.status(500).json({ message: 'Internal Server Error' })
