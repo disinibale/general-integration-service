@@ -18,6 +18,7 @@ router.get('/docs', (req, res) => {
 
 router.post('/message', instanceController.saveMessageToDatabase)
 
+router.post('/check-instances', instanceController.checkInstance);
 
 /* Define Router Here */
 
