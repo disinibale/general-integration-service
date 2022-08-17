@@ -30,9 +30,19 @@
 */
 
 const validateFormat = (message) => {
-	if (!message.hasOwnProperty('type')) {
+	if (!message.hasOwnProperty('timestamp')) {
 		return false
-	} else if (!message.hasOwnProperty('value')) {
+	} else if (!message.hasOwnProperty('channel_message_id')) {
+		return false
+	} else if (!message.hasOwnProperty('marketa_user')) {
+		return false
+	} else if (!message.hasOwnProperty('associated_user')) {
+		return false
+	} else if (!message.hasOwnProperty('type')) {
+		return false
+	}
+	
+	if (message.type === "TEXT" && !message.content) {
 		return false
 	}
 
