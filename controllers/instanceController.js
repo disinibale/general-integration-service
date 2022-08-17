@@ -1,12 +1,11 @@
 const database = require("../models")
 const registeredChannels = require("./channels.json")
 const { validateFormat, formatLastMessage, formatMessage } = require('../helpers')
+const axios = require('axios');
 
 const saveMessageToDatabase = async (req, res, next) => {
 	try {
-		
 		const { sub_id, instance_id, channel, type, message } = req.body
-
 		// body validations
 		if (!sub_id) throw { type: 'BAD_REQUEST', payload: 'sub_id' }
 		if (!instance_id) throw { type: 'BAD_REQUEST', payload: 'instance_id' }
@@ -93,7 +92,7 @@ const saveMessageToDatabase = async (req, res, next) => {
 				phone_number: message.associated_user.id,
 				name: message.associated_user.id,
 				phone_number_show: message.associated_user.id,
-				profile_picture: message.profile_picture,
+				profile_picture: message.associated_user.profile_picture,
 				instance_id: instance_id,
 				sync_firestore: false,
 				// unread_count: 0,
@@ -140,60 +139,108 @@ const saveMessageToDatabase = async (req, res, next) => {
 	}
 }
 
-module.exports = {
-	saveMessageToDatabase
-}
+const checkInstance = async (req, res, next) => {
+	try {
+		const {
+			sub_id,
+			instance_id,
+			recipient_id,
+			message,
+			room,
+			selectedRoom,
+			files,
+			replyMessage
+		} = req.body;
 
-const example = {
-	"sub_id": "sptdvu0z2",
-	"instance_id": "zlgjjky9",
-	"room_id": "sxgcoe-62822153798927",
-	"recipient_id": "62822153798927",
-	"channel": "WHATSAPP",
-	"type": "SEND",
-	"message": {
-		"type": "TEXT",
-		"value": {
-			"chatId": "sxgcoe-3A7A0FF697371292C753",
-			"dbRoomId": "sxgcoe-62822153798927",
-			"content": "makan ikan",
-			"files": [],
-			"original_message": "3A7A0FF697371292C753",
-			"data": { "quotedStanzaID": "3A66126D11755031F198" },
-			"fromMe": false,
-			"deleted": null,
-			"sender_id": "6288261487893",
-			"sender_name": "Testing",
-			"source_id": "3A7A0FF697371292C753",
-			// "timestamp": {"_seconds": 1660646300, "_nanoseconds": 0},
-			"distributed": true,
-			"seen": false,
-			"seen_by": [],
-			"replyMessage": { "content": "Makan apa tadi", "senderId": "6282215379892" },
-			"content_notification": "makan ayam"
-			// "couch_timestamp": "1660646300"
-		}
-	}
-}
 
-const realExample = {
-	"sub_id": "STRING",
-	"instance_id": "STRING",
-	"channel": "WHATSAPP" || "FACEBOOK" || "INSTAGRAM" || "TWITTER" || "WHATSAPP_CLOUD",
-	"type": "SEND" || "RECEIVE",
-	"message": {
-		"timestamp": "INTEGER",
-		"type": "TEXT" || "MEDIA",
-		"sender_id": "STRING",
-		"recipient_id": "STRING",
-		"attachments": [
-			{
-				"type": "image" || "audio" || "video" || "file",
-				"data": {
-					// data dari attachment isi disini
-				}
+		const settingsDb = await require("../models/settings.model")(
+			database.sequelize,
+			database.Sequelize,
+			`${sub_id}_settings`
+		);
+		
+		const instanceData = await settingsDb.findOne({
+			where: {
+				key: "instances"
 			}
-		],
-		"content": "STRING"
+		})
+
+		const instance = instanceData?.dataValues?.value;
+
+
+		// ++++++ TINGGAL DI UNCOMENT DAN DISESUAIKAN 
+
+		// if(instance.phone_number_id) {
+		// 	const endpoint = process.env.WA_CLOUD_ENDPOINT
+		// 	const chatPayload = {
+		// 		content: message,
+		// 		sub_id,
+		// 		instance_id,
+		// 		room_id: room,
+		// 		recipient_number: recipient_id
+		// 	}
+
+		// 	const response = await axios.post(endpoint, chatPayload);
+			
+		// 	console.log(response.data);
+		// } else if (instance.username) {
+		// 	const endpoint = process.env.TWITTER_ENDPOINT
+		// 	const chatPayload = {
+		// 		sub_id,
+		// 		instance_id,
+		// 		room_id: selectedRoom,
+		// 		content: {
+		// 			text: message
+		// 		}
+		// 	}
+		// 	const response = await axios.post(endpoint, chatPayload)
+
+		// 	console.log(response.data);
+
+		// } else if (instance.id_page) {
+		// 	const endpoint = process.env.FACEBOOK_ENDPOINT
+		// 	const chatPayload = {
+		// 		to: recipient_id,
+		// 		platform: 'facebook',
+		// 		message,
+		// 		pageAccessToken: instance.pageAccessToken
+		// 	}
+		// 	const messageParams = {
+		// 		subId: sub_id,
+		// 		instanceId: instance_id
+		// 	}
+
+		// 	const response = await axios.post(endpoint, chatPayload, {
+		// 		params: messageParams
+		// 	})
+
+		// 	console.log(response.data);
+
+		// 	//operation to facebook account
+		// } else if (instance.id_instagram) {
+		// 	const endpoint = process.env.INSTAGRAM_ENDPOINT
+		// 	const chatPayload = {
+		// 		to: recipient_id,
+		// 		platform: 'instagram',
+		// 		message,
+		// 		pageAccessToken: instance.pageAccessToken
+		// 	}
+		// 	//operation to instagram account
+		// }
+		// ++++++ TINGGAL DI UNCOMENT DAN DISESUAIKAN 
+
+		res.status(200).json({
+			message: "OKEI"
+		})
+	} catch (err) {
+		console.log(err);
+		res.status(500).json({
+			message: "ADA ERROR"
+		})
 	}
+}
+
+module.exports = {
+	saveMessageToDatabase,
+	checkInstance
 }
