@@ -1,6 +1,6 @@
 const database = require("../models")
 const registeredChannels = require("./channels.json")
-const { validateFormat, formatLastMessage, formatMessage } = require('../helpers')
+const { validateFormat, formatLastMessage, formatMessage, formatInstanceSettings } = require('../helpers')
 const axios = require('axios');
 const endpointConfig = require('../config/integrationEndpoint.config')
 
@@ -140,18 +140,63 @@ const saveMessageToDatabase = async (req, res, next) => {
 	}
 }
 
+const registerChannel = async (req, res, next) => {
+	try {
+		const { sub_id, instance_id, channel, label, instance_data } = req.body
+		console.log(req.body)
+
+		if (!sub_id) throw { status: 402, message: 'Bad Request', payload: 'sub_id' }
+		if (!instance_id) throw { status: 402, message: 'Bad Request', payload: 'instance_id' }
+
+		const foundChannel = registeredChannels.find((el) => el === channel)
+		if (!foundChannel) throw { type: 'BAD_REQUEST', payload: 'channel' }
+
+		const settingsDb = await require('../models/settings.model')(database.sequelize, database.Sequelize, `${sub_id}_settings`)
+		const instanceSetting = await settingsDb.findOne({ where: { key: 'instances' } })
+		const formatInstance = {
+			_id: instance_id,
+			color: '#' + Math.floor(Math.random() * 16777215).toString(16),
+			label,
+			status: 0,
+			sub_id,
+			is_loading: false,
+			instance_id,
+			label_server: label,
+			setting_sync: false,
+			...instance_data
+		}
+
+		const formattedInstancePayload = formatInstanceSettings(formatInstance)
+		const tempInstance = instanceSetting?.dataValues?.value
+		let newInstance = []
+		tempInstance.forEach((el) => {
+			newInstance.push(el)
+		})
+		newInstance.push({ ...formattedInstancePayload })
+
+		// TODO: Must Create function For eliminate Duplicated Object Values
+		// TODO: Create the function below (You can create a helper function or for this specific purposes)
+
+		// TODO: Create the function above
+		const updateInstance = await settingsDb.update({ value: newInstance }, { where: { key: 'instances' } })
+		console.log(updateInstance, 'UPDATED')
+
+		res.status(204).json(() => {
+			if (updateInstance[0] === 1) return {message: true}
+			
+			return {message: false}
+		})
+	} catch (e) {
+		console.log(e)
+		res.status(500).json({
+			message: 'Internal Server Error'
+		})
+	}
+}
+
 const checkInstance = async (req, res, next) => {
 	try {
-		const {
-			sub_id,
-			instance_id,
-			recipient_id,
-			message,
-			room,
-			selectedRoom,
-			files,
-			replyMessage
-		} = req.body;
+		const { sub_id, instance_id, recipient_id, message, room, selectedRoom, files, replyMessage } = req.body;
 
 
 		const settingsDb = await require("../models/settings.model")(
@@ -159,7 +204,7 @@ const checkInstance = async (req, res, next) => {
 			database.Sequelize,
 			`${sub_id}_settings`
 		);
-		
+
 		const instanceData = await settingsDb.findOne({
 			where: {
 				key: "instances"
@@ -168,10 +213,10 @@ const checkInstance = async (req, res, next) => {
 
 		const instance = instanceData?.dataValues?.value;
 		const channel = ''
-		let response 
+		let response
 		// ++++++ TINGGAL DI UNCOMENT DAN DISESUAIKAN 
 
-		if(instance.phone_number_id) {
+		if (instance.phone_number_id) {
 			channel = 'WA_CLOUD'
 			const endpoint = endpointConfig.waCloud
 			const chatPayload = {
@@ -183,7 +228,7 @@ const checkInstance = async (req, res, next) => {
 			}
 
 			response = await axios.post(endpoint, chatPayload);
-			
+
 			console.log(response.data);
 		} else if (instance.username) {
 			channel = 'TWITTER'
@@ -221,7 +266,7 @@ const checkInstance = async (req, res, next) => {
 			console.log(response.data);
 
 			//operation to facebook account
-		} 
+		}
 		// else if (instance.id_instagram) {
 		// 	channel = 'INSTAGRAM'
 		// 	const endpoint = endpointConfig.instagram
@@ -235,7 +280,7 @@ const checkInstance = async (req, res, next) => {
 		// }
 		// ++++++ TINGGAL DI UNCOMENT DAN DISESUAIKAN 
 
-		if(response.data) console.log('wakwaw')
+		if (response.data) console.log('wakwaw')
 
 		res.status(200).json({
 			message: "OK"
@@ -250,5 +295,6 @@ const checkInstance = async (req, res, next) => {
 
 module.exports = {
 	saveMessageToDatabase,
-	checkInstance
+	checkInstance,
+	registerChannel
 }

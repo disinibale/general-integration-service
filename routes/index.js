@@ -16,10 +16,9 @@ router.get('/docs', (req, res) => {
     res.send(converter.makeHtml(markdownContent))
 })
 
-router.post('/message', instanceController.saveMessageToDatabase)
-
-router.post('/check-instances', instanceController.checkInstance);
-
 /* Define Router Here */
+router.post('/message', instanceController.saveMessageToDatabase)
+router.post('/check-instances', instanceController.checkInstance)
+router.post('/register-channel', instanceController.registerChannel)
 
 module.exports = router
