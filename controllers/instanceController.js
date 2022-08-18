@@ -2,6 +2,7 @@ const database = require("../models")
 const registeredChannels = require("./channels.json")
 const { validateFormat, formatLastMessage, formatMessage } = require('../helpers')
 const axios = require('axios');
+const endpointConfig = require('../config/integrationEndpoint.config')
 
 const saveMessageToDatabase = async (req, res, next) => {
 	try {
@@ -166,59 +167,64 @@ const checkInstance = async (req, res, next) => {
 		})
 
 		const instance = instanceData?.dataValues?.value;
-
-
+		const channel = ''
+		let response 
 		// ++++++ TINGGAL DI UNCOMENT DAN DISESUAIKAN 
 
-		// if(instance.phone_number_id) {
-		// 	const endpoint = process.env.WA_CLOUD_ENDPOINT
-		// 	const chatPayload = {
-		// 		content: message,
-		// 		sub_id,
-		// 		instance_id,
-		// 		room_id: room,
-		// 		recipient_number: recipient_id
-		// 	}
+		if(instance.phone_number_id) {
+			channel = 'WA_CLOUD'
+			const endpoint = endpointConfig.waCloud
+			const chatPayload = {
+				content: message,
+				sub_id,
+				instance_id,
+				room_id: room,
+				recipient_number: recipient_id
+			}
 
-		// 	const response = await axios.post(endpoint, chatPayload);
+			response = await axios.post(endpoint, chatPayload);
 			
-		// 	console.log(response.data);
-		// } else if (instance.username) {
-		// 	const endpoint = process.env.TWITTER_ENDPOINT
-		// 	const chatPayload = {
-		// 		sub_id,
-		// 		instance_id,
-		// 		room_id: selectedRoom,
-		// 		content: {
-		// 			text: message
-		// 		}
-		// 	}
-		// 	const response = await axios.post(endpoint, chatPayload)
+			console.log(response.data);
+		} else if (instance.username) {
+			channel = 'TWITTER'
+			const endpoint = endpointConfig.twitter
+			const chatPayload = {
+				sub_id,
+				instance_id,
+				room_id: selectedRoom,
+				content: {
+					text: message
+				}
+			}
+			response = await axios.post(endpoint, chatPayload)
 
-		// 	console.log(response.data);
+			console.log(response.data);
 
-		// } else if (instance.id_page) {
-		// 	const endpoint = process.env.FACEBOOK_ENDPOINT
-		// 	const chatPayload = {
-		// 		to: recipient_id,
-		// 		platform: 'facebook',
-		// 		message,
-		// 		pageAccessToken: instance.pageAccessToken
-		// 	}
-		// 	const messageParams = {
-		// 		subId: sub_id,
-		// 		instanceId: instance_id
-		// 	}
+		} else if (instance.id_page) {
+			channel = 'FACEBOOK'
+			const endpoint = endpointConfig.facebook
+			const chatPayload = {
+				to: recipient_id,
+				platform: 'facebook',
+				message,
+				pageAccessToken: instance.pageAccessToken
+			}
+			const messageParams = {
+				subId: sub_id,
+				instanceId: instance_id
+			}
 
-		// 	const response = await axios.post(endpoint, chatPayload, {
-		// 		params: messageParams
-		// 	})
+			response = await axios.post(endpoint, chatPayload, {
+				params: messageParams
+			})
 
-		// 	console.log(response.data);
+			console.log(response.data);
 
-		// 	//operation to facebook account
-		// } else if (instance.id_instagram) {
-		// 	const endpoint = process.env.INSTAGRAM_ENDPOINT
+			//operation to facebook account
+		} 
+		// else if (instance.id_instagram) {
+		// 	channel = 'INSTAGRAM'
+		// 	const endpoint = endpointConfig.instagram
 		// 	const chatPayload = {
 		// 		to: recipient_id,
 		// 		platform: 'instagram',
@@ -229,8 +235,10 @@ const checkInstance = async (req, res, next) => {
 		// }
 		// ++++++ TINGGAL DI UNCOMENT DAN DISESUAIKAN 
 
+		if(response.data) console.log('wakwaw')
+
 		res.status(200).json({
-			message: "OKEI"
+			message: "OK"
 		})
 	} catch (err) {
 		console.log(err);
