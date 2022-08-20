@@ -176,15 +176,21 @@ const registerChannel = async (req, res, next) => {
 
 		// TODO: Must Create function For eliminate Duplicated Object Values
 		// TODO: Create the function below (You can create a helper function or for this specific purposes)
-
+		const uniqueInstance = Array.from(new Set(newInstance.map((key => key.instance_id))))
+			.map(instance_id => {
+				return newInstance.find(key => key.instance_id === instance_id)
+			})
 		// TODO: Create the function above
+
+		console.log(uniqueInstance)
+
 		const updateInstance = await settingsDb.update({ value: newInstance }, { where: { key: 'instances' } })
 		console.log(updateInstance, 'UPDATED')
 
-		res.status(204).json(() => {
-			if (updateInstance[0] === 1) return {message: true}
-			
-			return {message: false}
+		res.status(204).send(() => {
+			if (updateInstance[0] === 1) return { message: true }
+
+			return { message: false }
 		})
 	} catch (e) {
 		console.log(e)
@@ -196,77 +202,132 @@ const registerChannel = async (req, res, next) => {
 
 const checkInstance = async (req, res, next) => {
 	try {
-		const { sub_id, instance_id, recipient_id, message, room, selectedRoom, files, replyMessage } = req.body;
+		console.log(req.body)
+		const { sub_id, instance_id, recipient_id, message, room, selectedRoom, files, replyMessage, channel } = req.body;
 
+		if (!sub_id) return res.status(402).send({ message: 'sub_id is Required', payload: 'sub_id' })
+		if (!instance_id) return res.status(402).send({ message: 'instance_id is Required', payload: 'instance_id' })
+		if (!recipient_id) return res.status(402).send({ message: 'recipient_id is Required', payload: 'recipient_id' })
+		if (!message) return res.status(402).send({ message: 'message is Required', payload: 'message' })
+		if (!room) return res.status(402).send({ message: 'room is Required', payload: 'room' })
+		if (!selectedRoom) return res.status(402).send({ message: 'selectedRoom is Required', payload: 'selectedRoom' })
+		if (!files) return res.status(402).send({ message: 'files is Required', payload: 'files' })
+		if (!replyMessage) return res.status(402).send({ message: 'replyMessage is Required', payload: 'replyMessage' })
+		if (!channel) return res.status(402).send({ message: 'channel is Required', payload: 'channel' })
 
-		const settingsDb = await require("../models/settings.model")(
-			database.sequelize,
-			database.Sequelize,
-			`${sub_id}_settings`
-		);
+		const foundChannel = registeredChannels.find((el) => el === channel)
+		if (!foundChannel) res.status(404).send({ message: 'Channel Not Found', payload: 'channel' })
 
-		const instanceData = await settingsDb.findOne({
-			where: {
-				key: "instances"
-			}
+		const settingsDb = await require("../models/settings.model")(database.sequelize, database.Sequelize, `${sub_id}_settings`)
+		const instanceData = await settingsDb.findOne({ where: { key: "instances" } })
+
+		const instance = instanceData?.dataValues?.value
+		const found = instance.find((el) => {
+			if (el._id === instance_id) return el
 		})
 
-		const instance = instanceData?.dataValues?.value;
-		const channel = ''
-		let response
-		// ++++++ TINGGAL DI UNCOMENT DAN DISESUAIKAN 
+		let instance_data
+		let channelCfg
+		let endpoint
 
-		if (instance.phone_number_id) {
-			channel = 'WA_CLOUD'
-			const endpoint = endpointConfig.waCloud
-			const chatPayload = {
-				content: message,
-				sub_id,
-				instance_id,
-				room_id: room,
-				recipient_number: recipient_id
-			}
+		if ('instance_data' in found) instance_data = found.instance_data
+		if ('channel' in instance_data) channelCfg = endpointConfig.find((el) => el.name === channel)
 
-			response = await axios.post(endpoint, chatPayload);
-
-			console.log(response.data);
-		} else if (instance.username) {
-			channel = 'TWITTER'
-			const endpoint = endpointConfig.twitter
-			const chatPayload = {
-				sub_id,
-				instance_id,
-				room_id: selectedRoom,
-				content: {
-					text: message
-				}
-			}
-			response = await axios.post(endpoint, chatPayload)
-
-			console.log(response.data);
-
-		} else if (instance.id_page) {
-			channel = 'FACEBOOK'
-			const endpoint = endpointConfig.facebook
-			const chatPayload = {
-				to: recipient_id,
-				platform: 'facebook',
-				message,
-				pageAccessToken: instance.pageAccessToken
-			}
-			const messageParams = {
-				subId: sub_id,
-				instanceId: instance_id
-			}
-
-			response = await axios.post(endpoint, chatPayload, {
-				params: messageParams
-			})
-
-			console.log(response.data);
-
-			//operation to facebook account
+		if (!instance_data) {
+			return res.status(404).send({ message: 'Data of channel instances is not found', status: false })
 		}
+
+		if (!channelCfg) {
+			return res.status(404).send({ message: 'Channel configuration not found inside instance data', status: false })
+		} else {
+			endpoint = channelCfg.endpoint
+			const dataPayload = {
+				sub_id,
+				instance_id,
+				recipient_id,
+				message,
+				instance_data
+			}
+			try {
+				// TODO: Tinggal buat function buat save ke db room & message
+				const { data } = axios.post(endpoint, dataPayload)
+
+				// TODO: Create Save Room & Message Function below
+				// TODO: ...
+
+			} catch (e) {
+				console.log(e)
+				return res.status(500).send('Internal Server Error')
+			}
+
+		}
+
+
+		// if ('endpoint' in channelConfig) {
+		// 	endpoint = channelCfg.endpoint
+		// 	try {
+		// 		// ! DONE: Create Function to hit api from existing channel
+
+		// 		const { data } = await axios.post(endpoint, instance_data)
+
+		// 		// TODO: Write a function to get response message from channel API and save to the Room and Message DB
+		// 	} catch (e) {
+		// 		console.log(e)
+		// 		return res.status(500).send({ message: e?.message })
+		// 	}
+		// }
+
+		// if (instance.phone_number_id) {
+		// 	channel = 'WA_CLOUD'
+		// 	const endpoint = endpointConfig.waCloud
+		// 	const chatPayload = {
+		// 		content: message,
+		// 		sub_id,
+		// 		instance_id,
+		// 		room_id: room,
+		// 		recipient_number: recipient_id
+		// 	}
+
+		// 	response = await axios.post(endpoint, chatPayload);
+
+		// 	console.log(response.data);
+		// } else if (instance.username) {
+		// 	channel = 'TWITTER'
+		// 	const endpoint = endpointConfig.twitter
+		// 	const chatPayload = {
+		// 		sub_id,
+		// 		instance_id,
+		// 		room_id: selectedRoom,
+		// 		content: {
+		// 			text: message
+		// 		}
+		// 	}
+		// 	response = await axios.post(endpoint, chatPayload)
+
+		// 	console.log(response.data);
+
+		// } else if (instance.id_page) {
+		// 	channel = 'FACEBOOK'
+		// 	const endpoint = endpointConfig.facebook
+		// 	const chatPayload = {
+		// 		to: recipient_id,
+		// 		platform: 'facebook',
+		// 		message,
+		// 		pageAccessToken: instance.pageAccessToken
+		// 	}
+		// 	const messageParams = {
+		// 		subId: sub_id,
+		// 		instanceId: instance_id
+		// 	}
+
+		// 	response = await axios.post(endpoint, chatPayload, {
+		// 		params: messageParams
+		// 	})
+
+		// 	console.log(response.data);
+
+		// 	//operation to facebook account
+		// }
 		// else if (instance.id_instagram) {
 		// 	channel = 'INSTAGRAM'
 		// 	const endpoint = endpointConfig.instagram
@@ -280,10 +341,8 @@ const checkInstance = async (req, res, next) => {
 		// }
 		// ++++++ TINGGAL DI UNCOMENT DAN DISESUAIKAN 
 
-		if (response.data) console.log('wakwaw')
-
-		res.status(200).json({
-			message: "OK"
+		return res.status(404).json({
+			message: 'Instance Not Found'
 		})
 	} catch (err) {
 		console.log(err);
