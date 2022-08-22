@@ -186,6 +186,11 @@ const registerChannel = async (req, res, next) => {
 		// Combine Instance
 		newInstance.push({ ...formattedInstancePayload })
 
+		console.log('=============================================================')
+		console.log(tempInstance, '============== OLD INSTANCE DATA =============')
+		console.log(newInstance, '============== NEW INSTANCE DATA =============')
+		console.log('=============================================================')
+
 		// res.send(newInstance)
 		// console.log(uniqueInstance)
 
