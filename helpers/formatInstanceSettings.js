@@ -11,9 +11,9 @@
  * 
  */
 const formatInstanceSettings = (instancePayload) => {
-    const { _id, color, label, status, sub_id, is_loading, instance_id, label_server, setting_sync, ...instance_data }  = instancePayload
+    const { _id, color, label, status, sub_id, is_loading, instance_id, channel, label_server, setting_sync, ...instance_data } = instancePayload
 
-    return { _id, color, label, status, sub_id, is_loading, instance_id, label_server, setting_sync, instance_data }
+    return { _id, color, label, status, sub_id, is_loading, instance_id, channel, label_server, setting_sync, instance_data }
 }
 
 module.exports = formatInstanceSettings
