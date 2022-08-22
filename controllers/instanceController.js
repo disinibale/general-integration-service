@@ -166,23 +166,28 @@ const registerChannel = async (req, res, next) => {
 			...instance_data
 		}
 
+		// New Instance
 		const formattedInstancePayload = formatInstanceSettings(formatInstance)
+
+		// Temp Instance
 		const tempInstance = instanceSetting?.dataValues?.value
 		let newInstance = []
+
+		// Unique Instance Id
+		const instanceIndex = tempInstance.findIndex((el) => {
+			el._id === instance_id
+		})
+		tempInstance.splice(instanceIndex, 1)
 		tempInstance.forEach((el) => {
 			newInstance.push(el)
 		})
+
+		// Combine Instance
 		newInstance.push({ ...formattedInstancePayload })
 
-		// TODO: Must Create function For eliminate Duplicated Object Values
-		// TODO: Create the function below (You can create a helper function or for this specific purposes)
-		const uniqueInstance = Array.from(new Set(newInstance.map((key => key.instance_id))))
-			.map(instance_id => {
-				return newInstance.find(key => key.instance_id === instance_id)
-			})
-		// TODO: Create the function above
+		// res.send(newInstance)
 
-		console.log(uniqueInstance)
+		// console.log(uniqueInstance)
 
 		const updateInstance = await settingsDb.update({ value: newInstance }, { where: { key: 'instances' } })
 		console.log(updateInstance, 'UPDATED')
@@ -218,6 +223,10 @@ const checkInstance = async (req, res, next) => {
 		const foundChannel = registeredChannels.find((el) => el === channel)
 		if (!foundChannel) res.status(404).send({ message: 'Channel Not Found', payload: 'channel' })
 
+		const usersDb = database.users_subscrxiptions
+		const marketaUser = await usersDb.findOne({ where: { sub_id } })
+		if (!marketaUser) return res.status(404).send({ message: 'Marketa User Not Found', payload: sub_id })
+
 		const settingsDb = await require("../models/settings.model")(database.sequelize, database.Sequelize, `${sub_id}_settings`)
 		const instanceData = await settingsDb.findOne({ where: { key: "instances" } })
 
@@ -241,27 +250,21 @@ const checkInstance = async (req, res, next) => {
 			return res.status(404).send({ message: 'Channel configuration not found inside instance data', status: false })
 		} else {
 			endpoint = channelCfg.endpoint
-			const dataPayload = {
-				sub_id,
-				instance_id,
-				recipient_id,
-				message,
-				instance_data
-			}
 			try {
 				// TODO: Tinggal buat function buat save ke db room & message
+				const dataPayload = { sub_id, instance_id, recipient_id, message, instance_data }
 				const { data } = axios.post(endpoint, dataPayload)
 
 				// TODO: Create Save Room & Message Function below
 				// TODO: ...
 
+				return res.send(data)
 			} catch (e) {
 				console.log(e)
 				return res.status(500).send('Internal Server Error')
 			}
 
 		}
-
 
 		// if ('endpoint' in channelConfig) {
 		// 	endpoint = channelCfg.endpoint
