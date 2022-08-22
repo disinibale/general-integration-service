@@ -158,6 +158,7 @@ const registerChannel = async (req, res, next) => {
 			color: '#' + Math.floor(Math.random() * 16777215).toString(16),
 			label,
 			status: 0,
+			channel,
 			sub_id,
 			is_loading: false,
 			instance_id,
@@ -186,16 +187,13 @@ const registerChannel = async (req, res, next) => {
 		newInstance.push({ ...formattedInstancePayload })
 
 		// res.send(newInstance)
-
 		// console.log(uniqueInstance)
 
 		const updateInstance = await settingsDb.update({ value: newInstance }, { where: { key: 'instances' } })
 		console.log(updateInstance, 'UPDATED')
 
-		res.status(204).send(() => {
-			if (updateInstance[0] === 1) return { message: true }
-
-			return { message: false }
+		res.status(200).send({
+			updated: updateInstance[0] === 1 ? 'success' : 'failed',
 		})
 	} catch (e) {
 		console.log(e)
